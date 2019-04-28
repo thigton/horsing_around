@@ -37,17 +37,17 @@ So we can get upto data information and make
 ### Some horse racing lingo which will help understand the dataset
 Margin - how far did the horse lose by (lengths) <br>
 ground conditions / going -  THe code for these varies for different countries (https://en.wikipedia.org/wiki/Going_(horse_racing)) <br>
-barrier -  This the the gate the horse starts in.
-form_ratings - Not sure how these are caculated.
-last_five_starts or last_twenty_starts - see guide (https://www.racingexplained.co.uk/picking-a-winner/reading-the-form/). An 'x' is a spell in this case (spell = 3 month break from racing)
+barrier -  This the the gate the horse starts in. <br>
+form_ratings - Not sure how these are caculated. <br>
+last_five_starts or last_twenty_starts - see guide (https://www.racingexplained.co.uk/picking-a-winner/reading-the-form/). An 'x' is a spell in this case (spell = 3 month break from racing) <br>
 field_strength - measures the difference between the quality of the field against which the horse raced last start and will confront in the forthcoming race. Bear in mind that races of exactly the same class can vary in strength. This means the level of competition the horse is meeting in a Welter Handicap tomorrow could be 1.5kg “tougher” than the Welter field it raced at its last start and so on. In the FS column +1.5 means tomorrow’s field is 1.5kg stronger than the horse met last start. On the other hand, -2.0 means tomorrow’s race is 2kg “weaker” than its last start, thereby making the task of the horse easier than might be expected given that it is racing in the “same” class. Falvelon has a Field Strength figure of +5.5 meaning that this race is a 5.5Kg stronger quality race than its last start race.
-prize_money - total career earnings
-break down of starts/places/wins -  track - is the venue itself (I thnk)
-                                    firm/good/dead/slow/soft/heavy - are the going.  How to aussies defined the going changed                                                                      in 2014.  I propose we ignore dead and slow but should                                                                        double check.  These need to be standardised across                                                                          different countries though.
-                                    distance - specific distance
-                                    class_same - races in the same class as the race.  (races have classes, which probably                                                    differ between countries
-                                    class_stronger - races in a stronger class?  (this is a guess)
-                                    first_up - First race after a spell (3 month break from racing)
+prize_money - total career earnings<br>
+break down of starts/places/wins -  track - is the venue itself (I thnk) <br>
+                                    firm/good/dead/slow/soft/heavy - are the going.  How to aussies defined the going changed <br> in 2014.  I propose we ignore dead and slow but should <br>                                                            double check.  These need to be standardised across   <br>                                                                       different countries though.<br>
+                                    distance - specific distance<br>
+                                    class_same - races in the same class as the race.  (races have classes, which probably                                                    differ between countries<br>
+                                    class_stronger - races in a stronger class?  (this is a guess)<br>
+                                    first_up - First race after a spell (3 month break from racing)<br>
                                     second_up - First race after first_up race
                                     
 
