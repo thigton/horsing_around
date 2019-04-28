@@ -1,7 +1,7 @@
 # horsing_around
 Bet your horses his is going to work.
 
-## Welcome to the money making scheme whihc will change your lyf!
+## Welcome to the money making scheme which will change your lyf!
 jokes
 ### Project aims
 Predict horse racing results = make money
