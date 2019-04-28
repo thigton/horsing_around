@@ -35,8 +35,8 @@ Compare the odds offered for each case with the probability that the model spits
 So we can get upto data information and make
 
 ### Some horse racing lingo which will help understand the dataset
-Margin - how far did the horse lose by (lengths)
-ground conditions / going -  THe code for these varies for different countries (https://en.wikipedia.org/wiki/Going_(horse_racing))
+Margin - how far did the horse lose by (lengths) <br>
+ground conditions / going -  THe code for these varies for different countries (https://en.wikipedia.org/wiki/Going_(horse_racing)) <br>
 barrier -  This the the gate the horse starts in.
 form_ratings - Not sure how these are caculated.
 last_five_starts or last_twenty_starts - see guide (https://www.racingexplained.co.uk/picking-a-winner/reading-the-form/). An 'x' is a spell in this case (spell = 3 month break from racing)
