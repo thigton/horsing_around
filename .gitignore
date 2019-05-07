@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 
-/input/
+/Prediction_Model/input/
 
 # C extensions
 *.so
