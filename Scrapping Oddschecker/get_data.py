@@ -1,6 +1,7 @@
 import pickle
 from race_cls import race
 import os
+from datetime import datetime, timedelta
 
 
 
@@ -19,37 +20,42 @@ if __name__ == '__main__':
         print('events.pickle doesn''t exist')
         exit()
 
-    print(events.values().keys())
-    exit()
-    races = {venue:{} for venue in events.values().keys}
-    print(races)
-    exit()
-    # for each event check the time the script is running to determine what to do.
-    # races = {venue : time}
+    races = {}
     no_of_races = 0 
     for  (cc,v) in events.items():
         for venue, times in v.items():
-            print(f'venue : {venue}')
-            print(f'cc : {cc}')
-            for (time, start_data_collection) in times.items():
-                no_of_races += 1
-                print(f'times : {start_data_collection}')
-            # for time in times:
-                # x = race(url,'horses', cc, venue, time)
+            for time in times.keys():
+                start_collection = events[cc][venue][time]
+                start_time = start_collection + timedelta(hours = 5)
+                collect_results = start_time + timedelta(hours = 2)
+                # 1. If time now before the start_data_collection datetime put in the dictionary.  Do nothing
+                if datetime.now() < start_collection:
+                    break
+
+                # 2. If the time now is after the start_data_collection datetime but before the time of the race.  
+                elif (datetime.now() > start_collection) and (datetime.now() < start_time ):
+                    try: # update odds and statistics
+                        races[f'{venue}_{time}'].get_current_odds()
+                    except KeyError: # If the key doesn't exist, create the race class
+                        races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
+
+                # 3. If the time is between the time of the race and 2 hour afterwards.  Do nothing
+                elif (datetime.now() > start_time) and (datetime.now() < collect_results ):
+                    break
+
+                # 4. If the time if after 2 hour after the race.  
+                elif (datetime.now() > collect_results):
+                    pass
+                #   a) Collect the result.  
+                #   b) Save data to SQL database.  
+                #   c) Remove event from the events dictionary and update the pickle
+
+            #     no_of_races += 1
+            #     print(f'times : {start_data_collection}')
                 # break
             # break
         # break
-    print(no_of_races)
-    # 1. If time now before the start_data_collection datetime put in the dictionary.  Do nothing
+    # print(no_of_races)
 
-    # 2. If the time now is after the start_data_collection datetime but before the time of the race.  
-    #   a) Collect odds data and run stats
-    #   b) For future if the algo finds a good betting opportunity this is where it will go.
 
-    # 3. If the time is between the time of the race and 1 hour afterwards.  Do nothing
-
-    # 4. If the time if after 1 hour after the race.  
-    #   a) Collect the result.  
-    #   b) Save data to SQL database.  
-    #   c) Remove event from the events dictionary and update the pickle
     
