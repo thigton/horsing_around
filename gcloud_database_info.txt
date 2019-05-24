@@ -1,0 +1,8 @@
+Google cloud PostgreSQL database instance, 1 shared vCore, picked minimum 
+performance for pretty much everything to keep it cheeeeeap.
+
+project name: Horsing Around
+project ID: horsing-around
+instance name: horsing-around
+password: 48GrandNationalHorses%%
+location: europe-west1 (Belgium - only west europe one that does postgre)
