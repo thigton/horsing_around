@@ -3,7 +3,7 @@ import numpy as np
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup as soup
 import string
-from datetime import datetime, timedelta
+from datetime import datetime
 import operator
 import pickle
 import os
@@ -56,19 +56,15 @@ def get_races(bsoup, country_codes, sport = 'horses'):
             if code in txt[:3]:
                 cc = code
                 venue = txt.replace(code, '')
-                break
                 
-        # get event times 
-        events[cc][venue] = {} # dictionary for event times
-        times = [x.text for x in container.findAll('div', {'class' : 'racing-time'})]
-        for t in times:
-            # convert to datetime
-            d_time_now = datetime.combine(datetime.today(),datetime.strptime(t, '%H:%M').time()) 
-            # have a datetime 5 hours before the race as a marker to start collecting data
-            start_data_collection = d_time_now - timedelta(hours=5) 
-            # print(f'd_time_now = {d_time_now} , start_data_collection = {start_data_collection}')
-            
-            events[cc][venue][t] = start_data_collection
+                # get event times 
+                events[cc][venue] = {} # dictionary for event times
+                times = [x.text for x in container.findAll('div', {'class' : 'racing-time'})]
+
+                for t in times:
+                    # convert to datetime
+                    d_time_now = datetime.combine(datetime.today(),datetime.strptime(t, '%H:%M').time())             
+                    events[cc][venue][t] = d_time_now
 
     return events
 
@@ -80,7 +76,8 @@ if __name__ == '__main__':
 
     url = 'https://www.oddschecker.com/'
 
-    country_code = ['UK','IRE','AUS']
+    # country_code = ['UK','IRE','AUS']
+    country_code = ['UK','IRE']
 
     page_soup = get_soup(url)
 
