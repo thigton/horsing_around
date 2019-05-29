@@ -29,7 +29,7 @@ class race():
         
         # List of bookies on who are offering odds
         container = soup.find('tr', {'class':'eventTableFooter'}).findAll('td')
-        
+
         self.bookies = []
         for tag in container:
             try:
@@ -62,7 +62,6 @@ class race():
         # init horse class
         self.horses = [horse(container, self.bookies) for container in containers]
 
-        self.result_collected = False
         
         # self.rank_horses()
         
@@ -103,4 +102,3 @@ class race():
                 return 'Error - more than one row with horse name found - fix the bug'
             else:
                 horse.get_position(container[0])
-        self.result_collected = True
