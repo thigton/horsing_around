@@ -1,0 +1,28 @@
+Google cloud PostgreSQL database instance, 1 shared vCore, picked minimum 
+performance for pretty much everything to keep it cheeeeeap.
+
+### Google cloud SQL instance details ###
+project name: Horsing Around
+project ID: horsing-around
+instance name: horsing-around
+instance password: 48GrandNationalHorses%%
+location: europe-west1 (Belgium - only west europe one that does postgre)
+
+#### Google cloud sql user info ####
+user = Ed, password = EdTheHorse
+user = Tom, password = TomTheHorse
+
+# A few gcloud client queries that were semi-useful - probably easier to just use GUI google client
+gcloud sql connect horsing-around # connects to horsing-around instance (puts you into sql mode)
+gcloud sql databases list --instance=horsing-around # lists databases in horsing-around instance
+gcloud sql instances list # not tried yet, might list instances
+gcloud sql databases create db-horsing-around --instance=horsing-around # don't repeat this, just a log of what I did to create it
+
+
+###### SQL Manager for PostgreSQL Lite ######
+# Connecting to Google SQL 
+1. Click 'register database'
+2. Host name = Public IP address from Google Cloud instance overview
+   User name and password = from 'users' in gcloud instance tab (you can make a new user if you need to)
+Note - You might need to add your public ip address (google it) to the instance connections tab
+That's it... Now you can double click into the database and write queries
