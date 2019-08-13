@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 from datetime import date
 import pprint
-
+import pdb
 
 
 
@@ -52,11 +52,11 @@ if __name__ == '__main__':
             for time in times.keys():
                 
                 start_time = events[cc][venue][time] 
-                start_collection = start_time - timedelta(hours = 5)
-                collect_results = start_time + timedelta(hours = 2)
+                start_collection = start_time - timedelta(hours=5)
+                collect_results = start_time + timedelta(hours=2)
                 
-                # races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
-
+                # races[f'{venue}_{time}'] = race(url, 'horses', cc, venue, time)
+                
                 # 2. If the time now is after the start_data_collection datetime but before the time of the race.  
                 if (datetime.now() > start_collection) and (datetime.now() < start_time ):
                     try: # update odds and statistics
@@ -74,8 +74,7 @@ if __name__ == '__main__':
                     try:
                         print(f'Collecting Results: {venue}, {cc} at {time}')
                         races[f'{venue}_{time}'].get_result()
-                        races_for_database[f'{venue}_{time}'] = races[f'{venue}_{time}']
-                        races.pop([f'{venue}_{time}'])
+                        races_for_database[f'{venue}_{time}'] = races.pop(f'{venue}_{time}')
 
                     except KeyError:
                         print(f'{venue}, {cc} at {time} hasn''t been created.  Will do it now.')
@@ -89,7 +88,7 @@ if __name__ == '__main__':
                     (datetime.now() > start_time) and (datetime.now() < collect_results):
                     print(f'Nothing to do for: {venue}, {cc} at {time}')
                     continue
-
+                
     # write races and races_for_database dict to pickle
     try:
         with open('races.pickle', 'wb') as pickle_out:

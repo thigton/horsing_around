@@ -7,7 +7,8 @@ from datetime import datetime
 import operator
 import pickle
 import os
-
+import time
+import random
 
 
 def get_soup(base_url, sport = 'horses', event_url = None):
@@ -22,11 +23,19 @@ def get_soup(base_url, sport = 'horses', event_url = None):
     url = base_url + sport
     if event_url != None:
         url += event_url
-    
+    endswith=''
     req = Request(url , headers={'User-Agent': 'Mozilla/5.0'})
-    webpage = urlopen(req).read()
+    while endswith != '</body></html>':
+        try:
+            webpage = urlopen(req).read()
+            time.sleep(random.uniform(2,4))
+        except:
+            print('Request didn''t work!')
+            print('Will try again in 5 seconds...')
+            time.sleep(5)
+            webpage = urlopen(req).read()
+        endswith = webpage[-14:].decode(encoding='UTF-8',errors='strict')
     return soup(webpage, "html.parser")
-
 
 
 def get_races(bsoup, country_codes, sport = 'horses'):
