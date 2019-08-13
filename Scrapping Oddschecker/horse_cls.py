@@ -6,28 +6,31 @@ import numpy as np
 class horse():
     def __init__(self, container, bookies):
         '''Creates a horse object. Will initialise the dataframe to contain the odds data '''
-        # try:
         name_nationality = container.find('a',{'class':'hl-name-wrap beta-footnote bold'}).text.split('(')
         self.name = name_nationality[0]
         self.nationality = name_nationality[1].replace(')','')
-        # except:
         jockey_trainer = list(container.find('div', {'class' : 'hl-cell hl-jockey beta-caption4'}).stripped_strings)
         self.trainer = jockey_trainer[0]
+
         self.jockey = jockey_trainer[1]
+        jockey_claim = self.jockey.split('(')
+        self.jockey = jockey_claim[0].strip()
+        try:
+            self.jockey_claim = jockey_claim[1].replace(')','')
+        except IndexError:
+            self.jockey_claim = 0
         try:
             self.days_since_last_run = container.find('span', {'class' : 'lastrundays'}).text
         except AttributeError:
             self.days_since_last_run = None
-
         self.form = container.find('div', {'class' : 'hl-cell hl-form'}).text
         self.age = container.find('div', {'class' : 'hl-cell hl-age beta-footnote'}).text
-        card_stall = container.find('div', {'class': 'hl-cell hl-card'}).text.split(')')
+        card_stall = container.find('div', {'class': 'hl-cell hl-card'}).text.split('(')
         try:
             self.card = card_stall[0]
             self.stall = card_stall[1].replace(')','')
         except IndexError:
             self.stall = None
-
 
         weights = list(container.find('div',{'class' : 'hl-cell hl-weight beta-footnote'}).stripped_strings)
         self.weight = weights[0] # in stone and pounds
@@ -84,7 +87,6 @@ class horse():
         else:
             self.odds = pd.concat([self.odds, self.latest_odds], axis = 1)
             self.stats = pd.concat([self.stats, self.get_stats()], axis = 1)
-    
 
     def get_position(self, container):
         '''gets the position of the horse.
