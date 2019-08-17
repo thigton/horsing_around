@@ -67,6 +67,9 @@ if __name__ == '__main__':
                                        'horse_added_timestamp': datetime.now()}, index=[0])
             horses_to_add = pd.concat([horses_to_add,horse_data], axis=0)
             try:
+                odds_data = horse.odds
+                odds_data['race_id'] = race.race_id
+                odds_data['horse_name'] = horse.name
                 odds_to_add = pd.concat([odds_to_add, horse.odds], axis=0)
             except AttributeError:
                 continue
