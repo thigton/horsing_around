@@ -40,7 +40,6 @@ class race():
         if 'Age' not in self.race_info.keys():
             self.race_info['Age'] = None
      
-            print(self.race_info)
         
         # List of bookies on who are offering odds
         container = soup.find('tr', {'class':'eventTableFooter'}).findAll('td')

@@ -26,15 +26,15 @@ if __name__ == '__main__':
     
     # USING PYMYSQL TO CONNECT ON MAC AS THERE IS A BUG WITH MACS AND SQLALCHEMY.CREATE_ENGINE.
     # PLAN A IS TO USE SQLALCHEMY.CREATE_ENGINE AS THIS IS COMPATIBLE WITH DF_TO_SQL.
-    host="146.148.124.146"
-    port=3306
-    dbname="horse_test"
-    user="Ed"
-    password="EdTheHorse"
-    print('connecting to database')
-    engine = pymysql.connect(host, user=user,port=port,
-                               passwd=password, db=dbname)
-    # engine = sqlalchemy.create_engine("mysql+mysqldb://Ed:EdTheHorse@146.148.124.146/horse_test")
+    # host="146.148.124.146"
+    # port=3306
+    # dbname="horse_test"
+    # user="Ed"
+    # password="EdTheHorse"
+    # print('connecting to database')
+    # engine = pymysql.connect(host, user=user,port=port,
+    #                            passwd=password, db=dbname)
+    engine = sqlalchemy.create_engine("mysql+mysqldb://Ed:EdTheHorse@146.148.124.146/horse_test")
     cursor = engine.cursor()
 
     # UPDATE VENUES TABLE
@@ -43,7 +43,7 @@ if __name__ == '__main__':
                                  columns=['venue_name','country_code'])
     venues_to_add.drop_duplicates(subset='venue_name', keep='first', inplace=True)
     venues_to_add['venue_added_timestamp'] = datetime.now()
-    # venues_to_add.to_sql('venues',con=engine, schema='horse_test', if_exists='replace',index=False)
+    venues_to_add.to_sql('venues',con=engine, schema='horse_test', if_exists='replace',index=False)
         
     # UPDATE RACES, HORSES AND ODDS TABLE
     races_to_add = pd.DataFrame()
@@ -74,9 +74,9 @@ if __name__ == '__main__':
             except AttributeError:
                 continue
 
-    # races_to_add.to_sql('races',con=engine, schema='horse_test', if_exists='replace',index=False)
-    # horses_to_add.to_sql('horses',con=engine, schema='horse_test', if_exists='replace',index=False)
-    # odds_to_add.to_sql('odds',con=engine, schema='horse_test', if_exists='replace',index=False)
+    races_to_add.to_sql('races',con=engine, schema='horse_test', if_exists='replace',index=False)
+    horses_to_add.to_sql('horses',con=engine, schema='horse_test', if_exists='replace',index=False)
+    odds_to_add.to_sql('odds',con=engine, schema='horse_test', if_exists='replace',index=False)
     print(races_to_add.shape)
     print(horses_to_add.shape)
     print(odds_to_add.shape)
