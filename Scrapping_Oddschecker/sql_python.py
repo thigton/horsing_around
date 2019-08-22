@@ -1,4 +1,4 @@
-import pymysql
+# import pymysql
 import pandas as pd
 import sqlalchemy
 import pickle
