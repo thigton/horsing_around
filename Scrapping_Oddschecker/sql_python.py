@@ -1,4 +1,4 @@
-# import pymysql
+import pymysql
 import pandas as pd
 import sqlalchemy
 import pickle
@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 from race_cls import race
 from horse_cls import horse
+import mysql.connector
 
 # superseded mysql method
 
@@ -23,18 +24,24 @@ if __name__ == '__main__':
     except FileNotFoundError:
         print('races_for_database.pickle doesn''t exist')
         exit()
-    
+
     # USING PYMYSQL TO CONNECT ON MAC AS THERE IS A BUG WITH MACS AND SQLALCHEMY.CREATE_ENGINE.
     # PLAN A IS TO USE SQLALCHEMY.CREATE_ENGINE AS THIS IS COMPATIBLE WITH DF_TO_SQL.
-    # host="146.148.124.146"
-    # port=3306
-    # dbname="horse_test"
-    # user="Ed"
-    # password="EdTheHorse"
-    # print('connecting to database')
+    host="146.148.124.146"
+    port=3306
+    dbname="horse_test"
+    user="Ed"
+    password="EdTheHorse"
+    print('connecting to database')
     # engine = pymysql.connect(host, user=user,port=port,
     #                            passwd=password, db=dbname)
+    
+    # engine = mysql.connector.connect(user=user, password=password,
+    #                           host=host,
+    #                           database=dbname)
     engine = sqlalchemy.create_engine("mysql+mysqldb://Ed:EdTheHorse@146.148.124.146/horse_test")
+    print('CONNECTED! WOOO!')
+    exit()
     cursor = engine.cursor()
 
     # UPDATE VENUES TABLE
