@@ -6,6 +6,7 @@ import time
 from datetime import date
 import pprint
 import pdb
+import pytz
 
 
 
@@ -14,6 +15,7 @@ if __name__ == '__main__':
     # change cwd to file location
     os.chdir(os.path.dirname(os.path.realpath(__file__))) 
     url = 'https://www.oddschecker.com/'
+    timezone = pytz.timezone("Europe/London")
 
     # get the events dict
     try:
@@ -46,6 +48,8 @@ if __name__ == '__main__':
 
     # Will need to overwrite the events dictionary 
     # to not include those which we have collected the results on
+    # Event will be added to the new_events dict if it is just collecting
+    # more odds or doing nothing.
     new_events = {}
     for  (cc,v) in events.items():
         new_events[cc] = {}
@@ -61,7 +65,7 @@ if __name__ == '__main__':
                 # races[f'{venue}_{time}'] = race(url, 'horses', cc, venue, time)
                 
                 # 2. If the time now is after the start_data_collection datetime but before the time of the race.  
-                if (datetime.now() > start_collection) and (datetime.now() < start_time ):
+                if (datetime.now(timezone) > start_collection) and (datetime.now(timezone) < start_time ):
                     new_events[cc][venue][time] = start_time
                     try: # update odds and statistics
                         races[f'{venue}_{time}'].get_current_odds()
@@ -70,12 +74,11 @@ if __name__ == '__main__':
                         races[f'{venue}_{time}'].get_current_odds(first_time = True)
                 
                 # 4. If the time if after 1 hour after the race.  
-                elif (datetime.now() > collect_results):
+                elif (datetime.now(timezone) > collect_results):
                     #   a) Collect the result. 
                     try:
                         races[f'{venue}_{time}'].get_result()
                         races_for_database[f'{venue}_{time}'] = races.pop(f'{venue}_{time}')
-
                     except KeyError:
                         print(f'{venue}, {cc} at {time} hasn''t been created.  Will do it now.')
                         races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
@@ -86,11 +89,10 @@ if __name__ == '__main__':
                 # 1. If time now before the start_data_collection datetime put in the dictionary.  Do nothing
                 # 3. If the time is between the time of the race and 2 hour afterwards.  Do nothing
                 # 5. Result has been collected. do nothing
-                elif (datetime.now() < start_collection) or \
-                    (datetime.now() > start_time) and (datetime.now() < collect_results):
+                elif (datetime.now(timezone) < start_collection) or \
+                    (datetime.now(timezone) > start_time) and (datetime.now(timezone) < collect_results):
                     print(f'Nothing to do for: {venue}, {cc} at {time}')
                     new_events[cc][venue][time] = start_time
-                    continue
                 
     # write races and races_for_database dict to pickle
     try:
