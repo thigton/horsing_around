@@ -10,12 +10,6 @@ import mysql.connector
 import numpy as np
 import pytz 
 
-# superseded mysql method
-
-#pd.read_sql('select * from horses',engine)
-
-# engine = sqlalchemy.create_engine("mysql+pymysql://Ed:EdTheHorse@146.148.124.146/horse_test")
-
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -28,8 +22,6 @@ if __name__ == '__main__':
         print('races_for_database.pickle doesn''t exist')
         exit()
 
-    # USING PYMYSQL TO CONNECT ON MAC AS THERE IS A BUG WITH MACS AND SQLALCHEMY.CREATE_ENGINE.
-    # PLAN A IS TO USE SQLALCHEMY.CREATE_ENGINE AS THIS IS COMPATIBLE WITH DF_TO_SQL.
     host="146.148.124.146"
     port=3306
     dbname="horse_test"
@@ -42,19 +34,17 @@ if __name__ == '__main__':
     # engine = mysql.connector.connect(user=user, password=password,
     #                           host=host,
     #                           database=dbname)
-    engine = sqlalchemy.create_engine(f"mysql+mysqldb://{user}:{password}@{host}/{dbname}")
+    engine = sqlalchemy.create_engine(f"mysql+mysqldb://{user}:{password}@{host}/{dbname}", echo=False)
     print('CONNECTED! WOOO!')
 
-    cursor = engine.cursor()
 
     # UPDATE VENUES TABLE
     venue_sql = pd.read_sql('select venue_name from venues', engine)
-    venues_to_add = pd.DataFrame([(race.venue, race.cc) for race in data_dict.values() if race.venue not in venue_sql['venue_name']],
+    venues_to_add = pd.DataFrame([(race.venue, race.cc) for race in data_dict.values() if race.venue not in venue_sql['venue_name'].values],
                                  columns=['venue_name','country_code'])
     venues_to_add.drop_duplicates(subset='venue_name', keep='first', inplace=True)
-    venues_to_add['venue_added_timestamp'] = datetime.now(timezone)
+    venues_to_add['venue_added_timestamp'] = datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')
     
-        
     # UPDATE RACES, HORSES, ODDS AND EACH WAY TABLE
     races_to_add = pd.DataFrame()
     horses_to_add = pd.DataFrame()
@@ -65,18 +55,23 @@ if __name__ == '__main__':
         race_data = pd.DataFrame({'race_id':race.race_id, 'venue_name':race.venue, 'race_time':race.datetime,
                           'number_starters':race.race_info['Starters'], 'class':race.race_info['Class'],
                           'prize':race.race_info['Prize'], 'distance':race.race_info['Distance'],
-                          'going_description':race.race_info['Going'], 'race_added_timestamp':datetime.now(timezone)}, index=[0])
+                          'going_description':race.race_info['Going'],
+                          'race_added_timestamp':datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')}, index=[0])
         races_to_add = pd.concat([races_to_add,race_data], axis=0)
         
 
         for horse in race.horses:
             horse_data = pd.DataFrame({'horse_name':horse.name, 'race_id':race.race_id, 'form':horse.form, 
-                                       'horse_weight':horse.weight, 'days_since_last_run':horse.days_since_last_run,' horse_age':horse.age,
+                                       'horse_weight':horse.weight, 'days_since_last_run':horse.days_since_last_run, 
+                                       'horse_age':horse.age,
                                        'horse_nationality':horse.nationality, 'horse_head_gear':horse.head_gear, 
-                                       'horse_notables':horse.notables, 'jockey_name':horse.jockey, 'jockey_form':horse.jockey_form,
-                                       'jockey_claim':horse.jockey_claim, 'trainer_name':horse.trainer, 'stall':horse.stall, 
+                                       'horse_notables':horse.notables, 'jockey_name':horse.jockey,
+                                       'jockey_form':horse.jockey_form,
+                                       'jockey_claim':horse.jockey_claim, 'trainer_name':horse.trainer,
+                                       'stall':horse.stall, 
                                        'result':horse.position, 'horse_analysis_text':horse.analysis_text,
-                                       'horse_added_timestamp': datetime.now(timezone)}, index=[0])
+                                       'horse_added_timestamp': datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')},
+                                       index=[0])
             horses_to_add = pd.concat([horses_to_add,horse_data], axis=0)
             try:
                 odds_data = horse.odds
@@ -102,13 +97,14 @@ if __name__ == '__main__':
     # Load in the SQL table.
     each_way_sql = pd.read_sql('select * from each_way', engine)
     # Stick everything on the end of the sql table
-    each_way_to_add = pd.concat([each_way_sql, each_way_to_add], axis=0)
+    each_way_to_add = pd.concat([each_way_sql, each_way_to_add], axis=0, sort=True)
     # Drop duplicates and keep the sql table version
     each_way_to_add.drop_duplicates(subset=['bookmaker_id', 'number_places_paid', 'place_terms', 'number_starters'],
                                     keep='first', inplace=True)
     # Fill in na in the each_way_added_timestamp
-    each_way_to_add.fillna(value={'each_way_added_timestamp':datetime.now(timezone)}, inplace=True)
-    each_way_to_add['each_way_last_update_timestamp'] = datetime.now(timezone)
+    each_way_to_add.fillna(value={'each_way_added_timestamp':datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')},
+                           inplace=True)
+    each_way_to_add['each_way_last_update_timestamp'] = datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')
 
 
     # UPLOAD BACK TO THE DATABASE
@@ -149,7 +145,7 @@ if __name__ == '__main__':
     #         pass
     #     else:
     #         cursor.execute("INSERT INTO venues VALUES (%s, %s, timestamp)", 
-    #                         (race.venue, race.cc, datetime.now(timezone)))
+    #                         (race.venue, race.cc, datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')))
     #     engine.commit()
     #     exit()
     
@@ -178,7 +174,7 @@ if __name__ == '__main__':
     #         vals = (horse.name, race.race_id, horse.form, horse.weight, horse.days_since_last_run,
     #         horse.age, horse.nationality, horse.head_gear, horse.notables, horse.jockey,
     #         horse.jockey_form, horse.jockey_claim, horse.trainer, horse.stall, horse.position,
-    #         horse.analysis_text, datetime.now(timezone))
+    #         horse.analysis_text, datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S'))
     #         cursor.execute(sql, vals)
     #         engine.commit()
     
