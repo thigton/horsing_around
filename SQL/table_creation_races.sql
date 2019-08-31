@@ -5,7 +5,7 @@ venue_name VARCHAR(500) ,
 race_time TIMESTAMP,
 number_starters INTEGER,
 class VARCHAR(500),
-prize VARCHAR(500),
+prize VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
 distance VARCHAR(500),
 going_description VARCHAR(500),
 race_added_timestamp TIMESTAMP)

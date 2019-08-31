@@ -1,5 +1,5 @@
 CREATE TABLE odds (
-race_ID VARCHAR(500) PRIMARY KEY,
+race_ID VARCHAR(500),
 horse_name VARCHAR(500) ,
 bookmaker_id VARCHAR(500),
 odds_decimal VARCHAR(500),
