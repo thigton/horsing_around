@@ -1,11 +1,13 @@
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import pytz
 
 
 class horse():
 
     def __init__(self, container, bookies):
+        
         '''Creates a horse object. Will initialise the dataframe to contain the odds data '''
         name_nationality = container.find('a',{'class':'hl-name-wrap beta-footnote bold'}).text.split('(')
         self.name = name_nationality[0].strip()
@@ -21,7 +23,8 @@ class horse():
         except IndexError:
             self.jockey_claim = 0
         try:
-            self.days_since_last_run = container.find('span', {'class' : 'lastrundays'}).text
+            self.days_since_last_run = container.find('span', {'class' : 'lastrundays'}).text.split('(')[0]
+
         except AttributeError:
             self.days_since_last_run = None
         self.form = container.find('div', {'class' : 'hl-cell hl-form'}).text
@@ -35,9 +38,12 @@ class horse():
 
         weights = list(container.find('div',{'class' : 'hl-cell hl-weight beta-footnote'}).stripped_strings)
         self.weight = weights[0] # in stone and pounds
-
         try:
             self.head_gear = weights[1]
+            self.head_gear = [c for c in self.head_gear if c.isalpha()]
+            self.head_gear = ''.join(self.head_gear)
+            if self.head_gear == '':
+                self.head_gear = None
         except IndexError:
             self.head_gear = None
         
@@ -93,9 +99,10 @@ class horse():
     def update_odds(self, container,bookies, first):
         '''Appends another column of raw odds and stats to their respective dataframes'''
         # odds = self.get_odds(container, bookies)
+        timezone = pytz.timezone("Europe/London")
         self.latest_odds = pd.DataFrame(pd.Series(self.get_odds(container, bookies)),
                                      columns= ['odds'])
-        self.latest_odds['time'] = datetime.now().replace(second = 0, microsecond=0)
+        self.latest_odds['time'] = datetime.now(timezone).replace(second = 0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
         if first:
             self.odds = self.latest_odds
             # self.stats = pd.DataFrame(self.get_stats())
@@ -110,7 +117,7 @@ class horse():
         try:
             self.position = int(container.find('td', {'class' : 'position-cell'}).text[:-2])
         except ValueError:
-            self.position = 'Non Runner'
+            self.position = 'N/R'
         if self.position == 1 :
             self.win = True
         else:

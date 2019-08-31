@@ -9,6 +9,10 @@ import pickle
 import os
 import time
 import random
+import pytz
+import smtplib
+from email.message import EmailMessage
+from traceback import format_exc
 
 
 def get_soup(base_url, sport = 'horses', event_url = None):
@@ -45,7 +49,9 @@ def get_races(bsoup, country_codes, sport = 'horses'):
         bsoup = the page parse with beautifulsoup4
         country_codes = countries you want to get events for
         sport = the sport you want''' 
-    
+
+    timezone = pytz.timezone("Europe/London")
+
     events = {code:{} for code in country_codes}
     
     # website has both todays and tomorrows races on it.  Need to only get todays races
@@ -72,7 +78,7 @@ def get_races(bsoup, country_codes, sport = 'horses'):
 
                 for t in times:
                     # convert to datetime
-                    d_time_now = datetime.combine(datetime.today(),datetime.strptime(t, '%H:%M').time())             
+                    d_time_now = datetime.combine(datetime.today(), datetime.strptime(t, '%H:%M').time(), tzinfo=timezone)          
                     events[cc][venue][t] = d_time_now
 
     return events
@@ -82,22 +88,43 @@ def get_races(bsoup, country_codes, sport = 'horses'):
     
 
 if __name__ == '__main__':
-
-    # change cwd to file location
-    os.chdir(os.path.dirname(os.path.realpath(__file__))) 
-
-    url = 'https://www.oddschecker.com/'
-
-    # country_code = ['UK','IRE','AUS']
-    country_code = ['UK','IRE']
-    page_soup = get_soup(url)
-    events = get_races(page_soup, country_code)
-    # pickle the dictionary
     try:
-        os.remove('events.pickle')
-        print('existing events dictionary overwritten')
-    except FileNotFoundError:
-        print('events.pickle doesn''t exist.  Will create now')
+
+        # change cwd to file location
+        os.chdir(os.path.dirname(os.path.realpath(__file__))) 
     
-    with open('events.pickle', 'wb') as pickle_out:
-            pickle.dump(events, pickle_out)
+        url = 'https://www.oddschecker.com/'
+    
+        # country_code = ['UK','IRE','AUS']
+        country_code = ['UK','IRE']
+        page_soup = get_soup(url)
+        events = get_races(page_soup, country_code)
+        # pickle the dictionary
+        try:
+            os.remove('events.pickle')
+            print('existing events dictionary overwritten')
+        except FileNotFoundError:
+            print('events.pickle doesn''t exist.  Will create now')
+        
+        with open('events.pickle', 'wb') as pickle_out:
+                pickle.dump(events, pickle_out)
+
+    except Exception as e:
+        print(format_exc)
+        exit()
+        EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
+        EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
+
+        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com','ed.gent@hotmail.co.uk']
+
+        msg = EmailMessage()
+        msg['Subject'] = 'Get_events_dict.py failed - Error message'
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = contacts
+        msg.set_content(f'''Get_data.py failed at {datetime.now().strftime("%H:%M:%S")}.
+        
+        {format_exc()}''')
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)

@@ -7,116 +7,139 @@ from datetime import date
 import pprint
 import pdb
 import pytz
+import smtplib
+from email.message import EmailMessage
+from traceback import format_exc
 
 
 
 if __name__ == '__main__':
+    try:    
+        # change cwd to file location
+        os.chdir(os.path.dirname(os.path.realpath(__file__))) 
+        url = 'https://www.oddschecker.com/'
+        timezone = pytz.timezone("Europe/London")
 
-    # change cwd to file location
-    os.chdir(os.path.dirname(os.path.realpath(__file__))) 
-    url = 'https://www.oddschecker.com/'
-    timezone = pytz.timezone("Europe/London")
+        # get the events dict
+        try:
+            with open('events.pickle','rb') as pickle_in:
+                events = pickle.load(pickle_in)
+        except FileNotFoundError:
+            print('events.pickle doesn''t exist')
+            exit()
 
-    # get the events dict
-    try:
-        with open('events.pickle','rb') as pickle_in:
-            events = pickle.load(pickle_in)
-    except FileNotFoundError:
-        print('events.pickle doesn''t exist')
+
+        
+            # get the races dict
+        try:
+            with open('races.pickle','rb') as pickle_in:
+                races = pickle.load(pickle_in)
+        except FileNotFoundError:
+            print('races.pickle doesn''t exist, initialising now')
+            races = {}
+            with open('races.pickle', 'wb') as pickle_out:
+                pickle.dump(races, pickle_out)
+
+        try:
+            with open('races_for_database.pickle','rb') as pickle_in:
+                races_for_database = pickle.load(pickle_in)
+        except FileNotFoundError:
+            print('races_for_database.pickle doesn''t exist, initialising now')
+            races_for_database = {}
+            with open('races_for_database.pickle', 'wb') as pickle_out:
+                pickle.dump(races_for_database, pickle_out)
+
+        # Will need to overwrite the events dictionary 
+        # to not include those which we have collected the results on
+        # Event will be added to the new_events dict if it is just collecting
+        # more odds or doing nothing.
+        new_events = {}
+        for  (cc,v) in events.items():
+            new_events[cc] = {}
+            for venue, times in v.items():
+                new_events[cc][venue] = {}
+                for time in times.keys():
+
+                    print(f'{venue}, {cc} at {time}')
+                    start_time = events[cc][venue][time] 
+                    start_collection = start_time - timedelta(hours=5)
+                    collect_results = start_time + timedelta(hours=1)
+
+                    # races[f'{venue}_{time}'] = race(url, 'horses', cc, venue, time)
+
+                    # 2. If the time now is after the start_data_collection datetime but before the time of the race.  
+                    if (datetime.now(timezone) > start_collection) and (datetime.now(timezone) < start_time ):
+                        new_events[cc][venue][time] = start_time
+                        try: # update odds and statistics
+                            races[f'{venue}_{time}'].get_current_odds()
+                        except KeyError: # If the key doesn't exist, create the race class
+                            races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
+                            races[f'{venue}_{time}'].get_current_odds(first_time = True)
+
+                    # 4. If the time if after 1 hour after the race.  
+                    elif (datetime.now(timezone) > collect_results):
+                        #   a) Collect the result. 
+                        try:
+                            races[f'{venue}_{time}'].get_result()
+                            races_for_database[f'{venue}_{time}'] = races.pop(f'{venue}_{time}')
+                        except KeyError:
+                            print(f'{venue}, {cc} at {time} hasn''t been created.  Will do it now.')
+                            races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
+                            races[f'{venue}_{time}'].get_current_odds(first_time = True)
+                            races[f'{venue}_{time}'].get_result()
+                            races_for_database[f'{venue}_{time}'] = races.pop(f'{venue}_{time}')
+
+                    # 1. If time now before the start_data_collection datetime put in the dictionary.  Do nothing
+                    # 3. If the time is between the time of the race and 2 hour afterwards.  Do nothing
+                    # 5. Result has been collected. do nothing
+                    elif (datetime.now(timezone) < start_collection) or \
+                        (datetime.now(timezone) > start_time) and (datetime.now(timezone) < collect_results):
+                        print(f'Nothing to do for: {venue}, {cc} at {time}')
+                        new_events[cc][venue][time] = start_time
+
+        # write races and races_for_database dict to pickle
+        try:
+            with open('events.pickle', 'wb') as pickle_out:
+                pickle.dump(new_events, pickle_out)
+                print('events updated')
+        except FileNotFoundError:
+            print('events.pickle doesn''t exist')
+
+        try:
+            with open('races.pickle', 'wb') as pickle_out:
+                pickle.dump(races, pickle_out)
+                print('races updated')
+        except FileNotFoundError:
+            print('races.pickle doesn''t exist')
+
+        try:
+            with open('races_for_database.pickle', 'wb') as pickle_out:
+                pickle.dump(races_for_database, pickle_out)
+                print('races_for_database updated')
+        except FileNotFoundError:
+            print('races_for_database.pickle doesn''t exist')
+
+    except Exception as e:
+        print(format_exc)
         exit()
+        EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
+        EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
 
+        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com','ed.gent@hotmail.co.uk']
 
+        msg = EmailMessage()
+        msg['Subject'] = 'Get_data.py failed - Error message'
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = contacts
 
-        # get the races dict
-    try:
-        with open('races.pickle','rb') as pickle_in:
-            races = pickle.load(pickle_in)
-    except FileNotFoundError:
-        print('races.pickle doesn''t exist, initialising now')
-        races = {}
-        with open('races.pickle', 'wb') as pickle_out:
-            pickle.dump(races, pickle_out)
+        msg.set_content(f'''Get_data.py failed at {datetime.now().strftime("%H:%M:%S")}.
+        Race: {venue} at {time}
+        
+        {format_exc()}''')
 
-    try:
-        with open('races_for_database.pickle','rb') as pickle_in:
-            races_for_database = pickle.load(pickle_in)
-    except FileNotFoundError:
-        print('races_for_database.pickle doesn''t exist, initialising now')
-        races_for_database = {}
-        with open('races_for_database.pickle', 'wb') as pickle_out:
-            pickle.dump(races_for_database, pickle_out)
-
-    # Will need to overwrite the events dictionary 
-    # to not include those which we have collected the results on
-    # Event will be added to the new_events dict if it is just collecting
-    # more odds or doing nothing.
-    new_events = {}
-    for  (cc,v) in events.items():
-        new_events[cc] = {}
-        for venue, times in v.items():
-            new_events[cc][venue] = {}
-            for time in times.keys():
-                
-                print(f'{venue}, {cc} at {time}')
-                start_time = events[cc][venue][time] 
-                start_collection = start_time - timedelta(hours=5)
-                collect_results = start_time + timedelta(hours=1)
-                
-                # races[f'{venue}_{time}'] = race(url, 'horses', cc, venue, time)
-                
-                # 2. If the time now is after the start_data_collection datetime but before the time of the race.  
-                if (datetime.now(timezone) > start_collection) and (datetime.now(timezone) < start_time ):
-                    new_events[cc][venue][time] = start_time
-                    try: # update odds and statistics
-                        races[f'{venue}_{time}'].get_current_odds()
-                    except KeyError: # If the key doesn't exist, create the race class
-                        races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
-                        races[f'{venue}_{time}'].get_current_odds(first_time = True)
-                
-                # 4. If the time if after 1 hour after the race.  
-                elif (datetime.now(timezone) > collect_results):
-                    #   a) Collect the result. 
-                    try:
-                        races[f'{venue}_{time}'].get_result()
-                        races_for_database[f'{venue}_{time}'] = races.pop(f'{venue}_{time}')
-                    except KeyError:
-                        print(f'{venue}, {cc} at {time} hasn''t been created.  Will do it now.')
-                        races[f'{venue}_{time}'] = race(url,'horses',cc,venue,time)
-                        races[f'{venue}_{time}'].get_current_odds(first_time = True)
-                        races[f'{venue}_{time}'].get_result()
-                        races_for_database[f'{venue}_{time}'] = races.pop(f'{venue}_{time}')
-                        
-                # 1. If time now before the start_data_collection datetime put in the dictionary.  Do nothing
-                # 3. If the time is between the time of the race and 2 hour afterwards.  Do nothing
-                # 5. Result has been collected. do nothing
-                elif (datetime.now(timezone) < start_collection) or \
-                    (datetime.now(timezone) > start_time) and (datetime.now(timezone) < collect_results):
-                    print(f'Nothing to do for: {venue}, {cc} at {time}')
-                    new_events[cc][venue][time] = start_time
-                
-    # write races and races_for_database dict to pickle
-    try:
-        with open('events.pickle', 'wb') as pickle_out:
-            pickle.dump(new_events, pickle_out)
-            print('events updated')
-    except FileNotFoundError:
-        print('events.pickle doesn''t exist')
-
-    try:
-        with open('races.pickle', 'wb') as pickle_out:
-            pickle.dump(races, pickle_out)
-            print('races updated')
-    except FileNotFoundError:
-        print('races.pickle doesn''t exist')
-
-    try:
-        with open('races_for_database.pickle', 'wb') as pickle_out:
-            pickle.dump(races_for_database, pickle_out)
-            print('races_for_database updated')
-    except FileNotFoundError:
-        print('races_for_database.pickle doesn''t exist')
-
-
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)
 
 
 

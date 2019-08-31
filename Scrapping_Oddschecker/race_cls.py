@@ -91,7 +91,7 @@ class race():
         print(f'Updating Odds...')
         # soup the url
         soup = get_soup(base_url = self.url, sport = self.sport, event_url = self.url_ext)
-    
+        
         for horses in self.horses:
             #this should find the row for the horse we want
             container = soup.findAll('tr', {'data-bname': horses.name}) 
