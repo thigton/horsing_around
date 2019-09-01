@@ -14,6 +14,7 @@ from email.message import EmailMessage
 from traceback import format_exc
 
 
+
 if __name__ == '__main__':
     try:
 
@@ -45,6 +46,7 @@ if __name__ == '__main__':
 
         # UPDATE VENUES TABLE
         venue_sql = pd.read_sql('select venue_name from venues', engine)
+        
         venues_to_add = pd.DataFrame([(race.venue, race.cc) for race in data_dict.values() if race.venue not in venue_sql['venue_name'].values],
                                      columns=['venue_name','country_code'])
         venues_to_add.drop_duplicates(subset='venue_name', keep='first', inplace=True)
@@ -133,14 +135,34 @@ if __name__ == '__main__':
         os.remove("races.pickle")
         os.remove("races_for_database.pickle")
 
-    except Exception as e:
-        print(format_exc)
-        exit()
+
+        # Send an email with daily update of what has happened
         EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
         EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
 
-        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com','ed.gent@hotmail.co.uk']
+        contacts = ['thigton@gmail.com','ed.gent@hotmail.co.uk']
+        msg = EmailMessage()
+        msg['Subject'] = 'Horsing around - Daily Update'
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = contacts
 
+
+        msg.set_content(f'''Data has been successfully uploaded to the database.
+        Venue_data: Number of new venues added: {venues_to_add.shape[0] - venue_sql.shape[0]}
+        {}
+        
+        Horses_table:
+        {}''')
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)
+
+    except Exception as e:
+        EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
+        EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
+
+        contacts = ['thigton@gmail.com','ed.gent@hotmail.co.uk']
         msg = EmailMessage()
         msg['Subject'] = 'sql_python.py failed - Error message'
         msg['From'] = EMAIL_ADDRESS

@@ -120,12 +120,11 @@ if __name__ == '__main__':
             print('races_for_database.pickle doesn''t exist')
 
     except Exception as e:
-        print(format_exc)
-        exit()
+
         EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
         EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
 
-        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com','ed.gent@hotmail.co.uk']
+        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com']
 
         msg = EmailMessage()
         msg['Subject'] = 'Get_data.py failed - Error message'

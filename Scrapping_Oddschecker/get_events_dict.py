@@ -110,12 +110,11 @@ if __name__ == '__main__':
                 pickle.dump(events, pickle_out)
 
     except Exception as e:
-        print(format_exc)
-        exit()
+
         EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
         EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
 
-        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com','ed.gent@hotmail.co.uk']
+        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com']
 
         msg = EmailMessage()
         msg['Subject'] = 'Get_events_dict.py failed - Error message'
