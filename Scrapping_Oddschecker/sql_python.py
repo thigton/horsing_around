@@ -21,11 +21,11 @@ if __name__ == '__main__':
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
         timezone = pytz.timezone("Europe/London")
         try:
-            with open('races_for_database.pickle', 'rb') as pickle_in:
+            with open('races.pickle', 'rb') as pickle_in:
                 data_dict = pickle.load(pickle_in)
                 print('Loading in data for upload')
         except FileNotFoundError:
-            print('races_for_database.pickle doesn''t exist')
+            print('races.pickle doesn''t exist')
             exit()
 
         host=os.environ.get('DB_HOST_IP')
@@ -81,11 +81,13 @@ if __name__ == '__main__':
                                            index=[0])
                 horses_to_add = pd.concat([horses_to_add,horse_data], axis=0)
                 try:
-                    odds_data = horse.odds
+                    odds_data = horse.full_betting_data
+                    print(odds_data)
+                    exit()
                     odds_data['race_id'] = race.race_id
                     odds_data['horse_name'] = horse.name
                     odds_data['odds_added_timestamp'] = datetime.now(timezone).strftime('%Y-%m-%d %H:%M:%S')
-                    odds_to_add = pd.concat([odds_to_add, horse.odds], axis=0, sort=True)
+                    odds_to_add = pd.concat([odds_to_add, odds_data], axis=0, sort=True)
 
 
                 except AttributeError:
@@ -147,12 +149,12 @@ if __name__ == '__main__':
         msg['To'] = contacts
 
 
-        msg.set_content(f'''Data has been successfully uploaded to the database.
-        Venue_data: Number of new venues added: {venues_to_add.shape[0] - venue_sql.shape[0]}
-        {}
+        # msg.set_content(f'''Data has been successfully uploaded to the database.
+        # Venue_data: Number of new venues added: {venues_to_add.shape[0] - venue_sql.shape[0]}
+        # {}
         
-        Horses_table:
-        {}''')
+        # Horses_table:
+        # {}''')
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)

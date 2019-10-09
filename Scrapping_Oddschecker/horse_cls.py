@@ -74,7 +74,13 @@ class horse():
     def __str__(self):
         return f'{self.name} ridden by {self.jockey}'
     
-    def get_odds(self, container, bookies):
+    
+    def get_stats(self):
+        '''Return some basic stats for the horses odds at a certain time'''
+        self.consensus_mean = self.latest_odds.mean().values[0]
+        self.latest_prob = 1 / self.consensus_mean # use this to try and order the horses and give them a rank.
+    
+    def update_odds(self, container, bookies):
         '''returns a list of the odds for the horse
         the container needs to be the row in the main table with the odds info in it.'''
         odds_dict = {}
@@ -84,31 +90,8 @@ class horse():
                 odds_dict[bookie] = None
             else:
                 odds_dict[bookie] = float(odds['data-odig'])
-        return odds_dict
-    
-    def get_stats(self):
-        '''Return some basic stats for the horses odds at a certain time'''
-        mean = self.latest_odds.mean()
-        std = self.latest_odds.std()
-        maxx = self.latest_odds.max()
-        minn = self.latest_odds.min()
-        self.latest_prob = 1 / mean # use this to try and order the horses and give them a rank.
-        return pd.Series( (self.latest_prob, mean,std,maxx,minn), index = ['win_prob','mean','std','max','min'], 
-                         name = datetime.now().replace(second = 0, microsecond=0))
-    
-    def update_odds(self, container,bookies, first):
-        '''Appends another column of raw odds and stats to their respective dataframes'''
-        # odds = self.get_odds(container, bookies)
-        timezone = pytz.timezone("Europe/London")
-        self.latest_odds = pd.DataFrame(pd.Series(self.get_odds(container, bookies)),
-                                     columns= ['odds'])
-        self.latest_odds['time'] = datetime.now(timezone).replace(second = 0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-        if first:
-            self.odds = self.latest_odds
-            # self.stats = pd.DataFrame(self.get_stats())
-        else:
-            self.odds = pd.concat([self.odds, self.latest_odds], axis = 0)
-            # self.stats = pd.concat([self.stats, self.get_stats()], axis = 0)
+        self.latest_odds = pd.DataFrame(list(odds_dict.items()), columns=['bookies','odds'])
+        self.latest_odds.set_index('bookies', inplace=True)
 
     def get_position(self, container):
         '''gets the position of the horse.

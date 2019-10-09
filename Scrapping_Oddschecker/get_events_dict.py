@@ -4,6 +4,7 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup as soup
 import string
 from datetime import datetime
+import race_cls
 import operator
 import pickle
 import os
@@ -15,7 +16,7 @@ from email.message import EmailMessage
 from traceback import format_exc
 
 
-def get_soup(base_url, sport = 'horses', event_url = None):
+def get_soup(base_url, sport = 'horses', event_url = None, horse_url = None):
     '''Uses beautiful soup to get parse the url
     base_url = str, www.oddschecker.com/
     sport = str, which sport do you want to look at
@@ -25,8 +26,10 @@ def get_soup(base_url, sport = 'horses', event_url = None):
         sport = 'horse-racing'
     
     url = base_url + sport
-    if event_url != None:
+    if event_url != None and horse_url == None:
         url += event_url
+    elif event_url != None and horse_url != None:
+        url += f'{event_url}/bet-history/{horse_url}/'
     endswith=''
     req = Request(url , headers={'User-Agent': 'Mozilla/5.0'})
     while endswith != '</body></html>':
@@ -109,18 +112,34 @@ if __name__ == '__main__':
         with open('events.pickle', 'wb') as pickle_out:
                 pickle.dump(events, pickle_out)
 
+        ## INIT the race classes - no odds data
+        races = {}
+        for  (cc,v) in events.items():
+            for venue, times in v.items():  
+                for time in times.keys():
+                    print(f'{venue}, {cc} at {time}')
+                    races[f'{venue}_{time}'] = race_cls.race(url, 'horses', cc, venue, time)
+
+        try:
+            with open('races.pickle', 'wb') as pickle_out:
+                pickle.dump(races, pickle_out)
+                print('races updated')
+        except FileNotFoundError:
+            print('races.pickle doesn''t exist')
+
+
     except Exception as e:
 
         EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
         EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
 
-        contacts = ['t.higton17@imperial.ac.uk', 'thigton@gmail.com']
+        contacts = ['thigton@gmail.com']
 
         msg = EmailMessage()
         msg['Subject'] = 'Get_events_dict.py failed - Error message'
         msg['From'] = EMAIL_ADDRESS
         msg['To'] = contacts
-        msg.set_content(f'''Get_data.py failed at {datetime.now().strftime("%H:%M:%S")}.
+        msg.set_content(f'''Get_events_dict.py failed at {datetime.now().strftime("%H:%M:%S")}.
         
         {format_exc()}''')
 

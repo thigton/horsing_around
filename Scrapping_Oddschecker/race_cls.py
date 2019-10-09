@@ -4,6 +4,8 @@ from horse_cls import horse
 import operator
 import pandas as pd
 import numpy as np
+import pickle
+import itertools
 
 
 
@@ -82,31 +84,56 @@ class race():
             except IndexError:
                 horses.jockey_form = None
 
+        # get alpha values
+        try:
+            with open('alpha.pickle', 'rb') as pickle_in:
+                alpha_mat = pickle.load(pickle_in)
+        except FileNotFoundError:
+            print('No alpha matrix found!')
+        number_starters = int(self.race_info['Starters'])
+        self.alpha = alpha_mat[number_starters - 1, :number_starters-1]
+        self.race_finished = False
+
         
     def __str__(self):
         return f'{self.venue}, {self.cc} at {self.time}'
         
-    def get_current_odds(self, first_time=False):
+    def get_current_odds(self):
         '''Will update the odds in the horses class'''
         print(f'Updating Odds...')
         # soup the url
         soup = get_soup(base_url = self.url, sport = self.sport, event_url = self.url_ext)
-        
         for horses in self.horses:
             #this should find the row for the horse we want
             container = soup.findAll('tr', {'data-bname': horses.name}) 
             if len(container) != 1 :
                 return 'Error - more than one row with horses name found - fix the bug'
-            horses.update_odds(container[0], self.bookies, first=first_time)
+            horses.update_odds(container[0], self.bookies)
+            horses.get_stats()
+        self.rank_horses()
+        self.find_good_bets()
 
         
     def rank_horses(self):
         '''Orders the horses based on the value of their latest odds to find the favourite.'''
-        win_prob = [(h.name , h.latest_prob.values[0]) for h in self.horses]
+        win_prob = [[h.name , h.latest_prob] for h in self.horses]
         win_prob.sort(key=operator.itemgetter(1), reverse = True)
-        # This just orders the horse objects in the list, need to assign ranks to the horse (with time stamp)
-        # And to some object associated with the race?
+        for horses in self.horses:
+            horses.rank = [i for i, win in enumerate(win_prob) if win[0]==horses.name][0]
+        
+    def find_good_bets(self):
+        '''Function will find good bets based on the simple function'''
+        def good_bet_formula(row):
+            '''This takes in the rows of latest_odds and 
+            returns True or False whether you should bet'''
+            if row['odds'] > 1/(horses.latest_prob - self.alpha[horses.rank-1]):
+                print(f"Good Bet: {horses.name}, Bookies: {row.name}, odds: {row['odds']}")
+
+        for horses in self.horses:
+            horses.latest_odds.apply(good_bet_formula, axis=1)
     
+
+
     def get_result(self):
         '''Method will:
         1.  Assign the position of each horse to their respective classes
@@ -122,3 +149,68 @@ class race():
                 return 'Error - more than one row with horse name found - fix the bug'
             else:
                 horses.get_position(container[0])
+    
+    def get_full_bet_history(self):
+        for horses in self.horses:
+            horse_url = horses.name.replace(' ', '-')
+            soup = get_soup(base_url = self.url, sport = self.sport, event_url = self.url_ext, horse_url=horse_url)
+            table = soup.find('table', {'class': 'eventTable'})
+            df = pd.read_html(str(table), index_col=0)[0]
+            df.columns = self.bookies
+            series = df.stack()
+            df = series.reset_index(level=1, name='odds')
+            df.rename({'level_1':'bookies'}, inplace=True)
+            df = df[df['odds'] != 'SP']
+            df['decimal odds'] = df.apply(fractional_to_decimal_odd_easy, axis=1)
+            df['rolling mean'] = df['decimal odds'].rolling(window=10, min_periods=1).mean()
+            df['decimal odds'] = df.apply(fractional_to_decimal_odd_hard, axis=1)
+            df.drop('rolling mean', axis=1, inplace=True)
+            df.drop('odds', axis=1, inplace=True)
+            df = df[df.index != 'Previous Day Closing Price']
+            df.index = pd.to_datetime(df.index)
+            horses.full_betting_data = df
+        self.race_finished = True
+
+def fractional_to_decimal_odd_easy(row):
+    if isinstance(row['odds'], float):
+        return row['odds'] + 1.0
+    elif 'SP' in row['odds']:
+        return 
+    elif row['odds'].count('/') == 0:
+        return float(row['odds']) + 1.0
+    elif row['odds'].count('/') == 1:
+        numbers = row['odds'].split('/')
+        return float(numbers[0])/ float(numbers[1]) + 1.0
+    elif row['odds'].count('/') > 1:
+        return np.nan
+
+def fractional_to_decimal_odd_hard(row):
+    diff=100000
+    if isinstance(row['odds'], float):
+        return row['decimal odds']
+    elif row['odds'].count('/') <=1:
+        return row['decimal odds']
+    elif row['odds'].count('/') == 2:
+        numbers = row['odds'].split('/')
+        for i in range(1,len(numbers[1])):
+            odd1 = float(numbers[0])/float(numbers[1][:i]) + 1
+            odd2 = float(numbers[1][i:])/float(numbers[2]) + 1
+            if abs((odd1+odd2)/2 - row['rolling mean']) < diff:
+                diff = abs((odd1+odd2)/2 - row['rolling mean'])
+                odd_final = (odd1, odd2)
+        return odd_final
+    elif row['odds'].count('/') == 3:
+        numbers = row['odds'].split('/')
+        for i, j in itertools.product(list(range(1,len(numbers[1]))), list(range(1, len(numbers[2])))):
+            odd1 = float(numbers[0])/float(numbers[1][:i]) + 1
+            odd2 = float(numbers[1][i:])/float(numbers[2][:j]) + 1
+            odd3 = float(numbers[2][j:])/float(numbers[3]) + 1
+            if abs((odd1+odd2+odd3)/3 - row['rolling mean']) < diff:
+                diff = abs((odd1+odd2+odd3)/3 - row['rolling mean'])
+                odd_final = (odd1, odd2, odd3)
+        return odd_final
+    else:
+        print('row had more than 3 / odds in it!')
+        print(row)
+        exit()
+# if __name__ == '__main__':
