@@ -7,21 +7,32 @@ import pytz
 class horse():
 
     def __init__(self, container, bookies):
-        
+
         '''Creates a horse object. Will initialise the dataframe to contain the odds data '''
+
         name_nationality = container.find('a',{'class':'hl-name-wrap beta-footnote bold'}).text.split('(')
         self.name = name_nationality[0].strip()
-        self.nationality = name_nationality[1].replace(')','')
-        jockey_trainer = list(container.find('div', {'class' : 'hl-cell hl-jockey beta-caption4'}).stripped_strings)
-        self.trainer = jockey_trainer[0]
+        if len(name_nationality) > 1:
+            self.nationality = name_nationality[1].replace(')','')
+        else:
+            self.nationality = None
 
-        self.jockey = jockey_trainer[1]
-        jockey_claim = self.jockey.split('(')
-        self.jockey = jockey_claim[0].strip()
+        jockey_trainer = list(container.find('div', {'class' : 'hl-cell hl-jockey beta-caption4'}).stripped_strings)
         try:
-            self.jockey_claim = jockey_claim[1].replace(')','')
+            self.trainer = jockey_trainer[0]
         except IndexError:
-            self.jockey_claim = 0
+            self.trainer = None
+        try:
+            self.jockey = jockey_trainer[1]
+            jockey_claim = self.jockey.split('(')
+            try:
+                self.jockey_claim = jockey_claim[1].replace(')','')
+            except IndexError:
+                self.jockey_claim = 0
+        except IndexError:
+            self.jockey = None
+            self.jockey_claim = None
+
         try:
             self.days_since_last_run = container.find('span', {'class' : 'lastrundays'}).text.split('(')[0]
 
@@ -29,12 +40,6 @@ class horse():
             self.days_since_last_run = None
         self.form = container.find('div', {'class' : 'hl-cell hl-form'}).text
         self.age = container.find('div', {'class' : 'hl-cell hl-age beta-footnote'}).text
-        card_stall = container.find('div', {'class': 'hl-cell hl-card'}).text.split('(')
-        try:
-            self.card = card_stall[0]
-            self.stall = card_stall[1].replace(')','')
-        except IndexError:
-            self.stall = None
 
         weights = list(container.find('div',{'class' : 'hl-cell hl-weight beta-footnote'}).stripped_strings)
         self.weight = weights[0] # in stone and pounds
@@ -46,7 +51,7 @@ class horse():
                 self.head_gear = None
         except IndexError:
             self.head_gear = None
-        
+
         self.notables = ''
         if container.find('a', {'class':'history-cd racecard-icon'}) is not None:
             self.notables = f'{self.notables}CD/'
@@ -60,26 +65,27 @@ class horse():
             self.notables = self.notables[:-1]
         else:
             self.notables = None
-        
+
         self.analysis_text = container.find('div', {'class' : 'hl-comment beta-footnote'}).text
-                
+        self.position = None
+
     def get_jockey_form(self, container):
-        '''returns the jockeys form as an attribute.  
+        '''returns the jockeys form as an attribute.
         This is hidden in a different table to the container for the __init__'''
         try:
             self.jockey_form = container.find('span', {'class': 'current-form'}).text
         except AttributeError:
             self.jockey_form = None
-                  
+
     def __str__(self):
         return f'{self.name} ridden by {self.jockey}'
-    
-    
+
+
     def get_stats(self):
         '''Return some basic stats for the horses odds at a certain time'''
         self.consensus_mean = self.latest_odds.mean().values[0]
         self.latest_prob = 1 / self.consensus_mean # use this to try and order the horses and give them a rank.
-    
+
     def update_odds(self, container, bookies):
         '''returns a list of the odds for the horse
         the container needs to be the row in the main table with the odds info in it.'''
@@ -101,8 +107,23 @@ class horse():
             self.position = int(container.find('td', {'class' : 'position-cell'}).text[:-2])
         except ValueError:
             self.position = 'N/R'
+        except AttributeError:
+            print('There is something wrong with the URL!')
+            self.position = None
         if self.position == 1 :
             self.win = True
         else:
             self.win = False
+
+    def get_stall(self, container):
+        """Stalls aren't released early enough for the initial grab at 9am.
+        So run at time of results collection"""
+        card_stall = container.find('div', {'class': 'hl-cell hl-card'}).text.split('(')
+        try:
+            self.card = card_stall[0]
+            self.stall = card_stall[1].replace(')','')
+        except IndexError:
+            self.stall = None
+
+
 

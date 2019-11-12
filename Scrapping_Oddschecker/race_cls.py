@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import itertools
+import re
 
 
 
@@ -41,8 +42,8 @@ class race():
             self.race_info['Going'] = None
         if 'Age' not in self.race_info.keys():
             self.race_info['Age'] = None
-     
-        
+
+
         # List of bookies on who are offering odds
         container = soup.find('tr', {'class':'eventTableFooter'}).findAll('td')
 
@@ -78,7 +79,7 @@ class race():
         self.horses = [horse(container, self.bookies) for container in containers]
         # Have to get the jockey form from a different part of the HTML.
         for horses in self.horses:
-            container = soup.findAll('tr', {'data-bname': horses.name}) 
+            container = soup.findAll('tr', {'data-bname': horses.name})
             try:
                 horses.get_jockey_form(container[0])
             except IndexError:
@@ -94,10 +95,10 @@ class race():
         self.alpha = alpha_mat[number_starters - 1, :number_starters-1]
         self.race_finished = False
 
-        
+
     def __str__(self):
         return f'{self.venue}, {self.cc} at {self.time}'
-        
+
     def get_current_odds(self):
         '''Will update the odds in the horses class'''
         print(f'Updating Odds...')
@@ -105,7 +106,7 @@ class race():
         soup = get_soup(base_url = self.url, sport = self.sport, event_url = self.url_ext)
         for horses in self.horses:
             #this should find the row for the horse we want
-            container = soup.findAll('tr', {'data-bname': horses.name}) 
+            container = soup.findAll('tr', {'data-bname': horses.name})
             if len(container) != 1 :
                 return 'Error - more than one row with horses name found - fix the bug'
             horses.update_odds(container[0], self.bookies)
@@ -113,28 +114,28 @@ class race():
         self.rank_horses()
         self.find_good_bets()
 
-        
+
     def rank_horses(self):
         '''Orders the horses based on the value of their latest odds to find the favourite.'''
         win_prob = [[h.name , h.latest_prob] for h in self.horses]
         win_prob.sort(key=operator.itemgetter(1), reverse = True)
         for horses in self.horses:
             horses.rank = [i for i, win in enumerate(win_prob) if win[0]==horses.name][0]
-        
+
     def find_good_bets(self):
         '''Function will find good bets based on the simple function'''
         def good_bet_formula(row):
-            '''This takes in the rows of latest_odds and 
+            '''This takes in the rows of latest_odds and
             returns True or False whether you should bet'''
             if row['odds'] > 1/(horses.latest_prob - self.alpha[horses.rank-1]):
                 print(f"Good Bet: {horses.name}, Bookies: {row.name}, odds: {row['odds']}")
 
         for horses in self.horses:
             horses.latest_odds.apply(good_bet_formula, axis=1)
-    
 
 
-    def get_result(self):
+
+    def get_result_and_stall(self):
         '''Method will:
         1.  Assign the position of each horse to their respective classes
         2.  Assign a True / False attribute to each horse class whether they were a winner or placed
@@ -144,73 +145,68 @@ class race():
         soup = get_soup(base_url = self.url, sport = self.sport, event_url = self.url_ext)
         for horses in self.horses:
             #this should find the row for the horse we want
-            container = soup.findAll('tr', {'data-bname': horses.name}) 
+            container = soup.findAll('tr', {'data-bname': horses.name})
             if len(container) != 1 :
                 return 'Error - more than one row with horse name found - fix the bug'
             else:
                 horses.get_position(container[0])
-    
-    def get_full_bet_history(self):
+            if horses.position == None:
+                print('Something wrong with the URL - not finding any results yet')
+                self.race_finished = False
+        self.get_horse_stalls(soup)
+
+    def get_full_bet_history(self, start, end):
+        """Scraps the full table of bet history for each horse
+
+        Arguments:
+            start {datetime} -- start time of interest
+            end {datetime} -- end time of interest
+        """
+
+        time_pattern = re.compile('..:..')
+        odd_pattern = re.compile('.*/.*')
         for horses in self.horses:
+            # print(horses.name)
             horse_url = horses.name.replace(' ', '-')
             soup = get_soup(base_url = self.url, sport = self.sport, event_url = self.url_ext, horse_url=horse_url)
             table = soup.find('table', {'class': 'eventTable'})
-            df = pd.read_html(str(table), index_col=0)[0]
-            df.columns = self.bookies
-            series = df.stack()
-            df = series.reset_index(level=1, name='odds')
-            df.rename({'level_1':'bookies'}, inplace=True)
-            df = df[df['odds'] != 'SP']
-            df['decimal odds'] = df.apply(fractional_to_decimal_odd_easy, axis=1)
-            df['rolling mean'] = df['decimal odds'].rolling(window=10, min_periods=1).mean()
-            df['decimal odds'] = df.apply(fractional_to_decimal_odd_hard, axis=1)
-            df.drop('rolling mean', axis=1, inplace=True)
-            df.drop('odds', axis=1, inplace=True)
-            df = df[df.index != 'Previous Day Closing Price']
-            df.index = pd.to_datetime(df.index)
+            rows = table.findAll('tr',{'class': 'eventTableRow'})
+            horses_odds = []
+            for row in rows:
+                cells = row.findAll('td')
+                for i, cell in enumerate(cells):
+                    if cell.text == '':
+                        continue
+                    elif time_pattern.match(cell.text):
+                        time = cell.text
+                    else:
+                        odds = cell.findAll('div')
+                        for odd in odds:
+                            if odd.text == 'SP':
+                                continue
+                            elif odd_pattern.match(odd.text):
+                                numbers = odd.text.split('/')
+                                the_odd = float(numbers[0]) / float(numbers[1]) + 1
+                                horses_odds.append((time, the_odd, self.bookies[i-1]))
+                            else:
+                                horses_odds.append((time, float(odd.text) + 1, self.bookies[i-1]))
+            df = pd.DataFrame(horses_odds, columns=['time_odds_captured', 'odds_decimal','bookmaker_id'])
+            df.index = pd.to_datetime(df['time_odds_captured'])
+            df.drop('time_odds_captured', axis=1, inplace=True)
+            df = df[(df.index > start) & (df.index < end)]
+
             horses.full_betting_data = df
+
         self.race_finished = True
 
-def fractional_to_decimal_odd_easy(row):
-    if isinstance(row['odds'], float):
-        return row['odds'] + 1.0
-    elif 'SP' in row['odds']:
-        return 
-    elif row['odds'].count('/') == 0:
-        return float(row['odds']) + 1.0
-    elif row['odds'].count('/') == 1:
-        numbers = row['odds'].split('/')
-        return float(numbers[0])/ float(numbers[1]) + 1.0
-    elif row['odds'].count('/') > 1:
-        return np.nan
+    def get_horse_stalls(self, soup):
 
-def fractional_to_decimal_odd_hard(row):
-    diff=100000
-    if isinstance(row['odds'], float):
-        return row['decimal odds']
-    elif row['odds'].count('/') <=1:
-        return row['decimal odds']
-    elif row['odds'].count('/') == 2:
-        numbers = row['odds'].split('/')
-        for i in range(1,len(numbers[1])):
-            odd1 = float(numbers[0])/float(numbers[1][:i]) + 1
-            odd2 = float(numbers[1][i:])/float(numbers[2]) + 1
-            if abs((odd1+odd2)/2 - row['rolling mean']) < diff:
-                diff = abs((odd1+odd2)/2 - row['rolling mean'])
-                odd_final = (odd1, odd2)
-        return odd_final
-    elif row['odds'].count('/') == 3:
-        numbers = row['odds'].split('/')
-        for i, j in itertools.product(list(range(1,len(numbers[1]))), list(range(1, len(numbers[2])))):
-            odd1 = float(numbers[0])/float(numbers[1][:i]) + 1
-            odd2 = float(numbers[1][i:])/float(numbers[2][:j]) + 1
-            odd3 = float(numbers[2][j:])/float(numbers[3]) + 1
-            if abs((odd1+odd2+odd3)/3 - row['rolling mean']) < diff:
-                diff = abs((odd1+odd2+odd3)/3 - row['rolling mean'])
-                odd_final = (odd1, odd2, odd3)
-        return odd_final
-    else:
-        print('row had more than 3 / odds in it!')
-        print(row)
-        exit()
-# if __name__ == '__main__':
+        containers = soup.findAll('div', {'class':'hl-row'})
+        for container in containers:
+            # strip the name from the each row
+            name = container.find('a',{'class':'hl-name-wrap beta-footnote bold'}).text.split('(')
+            name = name[0].strip()
+            # match the name to one of the horse instances
+            horse_obj = next(horses for horses in self.horses if horses.name == name)
+            # find the stall for that horse
+            horse_obj.get_stall(container)
